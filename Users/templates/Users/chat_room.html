@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emessage - {{ group.name }}</title>
+    <style>
+        #chat-log { height: 400px; border: 1px solid #ddd; overflow-y: scroll; padding: 10px; margin-bottom: 10px; background: #f9f9f9; }
+        .message { margin-bottom: 8px; padding: 5px; border-radius: 4px; background: white; border-left: 3px solid #007bff; }
+        .join-container { text-align: center; padding: 50px; border: 1px solid #eee; margin: 20px; border-radius: 8px; }
+        #chat-message-submit { background-color: #007bff; color: white; border: none; padding: 5px 15px; cursor: pointer; }
+    </style>
+</head>
+
+<body>
+    {% if is_member %}
+        <h2>Group: {{ group.name }}</h2>
+        <h2>{% if group.members.count == 2 %}Chat with Member{% else %}Group: {{ group.name }}{% endif %}</h2>
+        <div id="presence-status">
+            {% for member in group.members.all %}
+                {% if member != request.user %}
+                    {% if member.share_presence %}
+                        {% if member.is_online %}
+                            <p style="color: #25D366; font-size: 14px; margin-top: -10px;">● Online</p>
+                        {% elif member.last_seen %}
+                            <p style="color: #666; font-size: 12px; margin-top: -10px;">
+                                last seen {{ member.last_seen|timesince }} ago
+                            </p>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div id="group-info">
+            <p><strong>Admin:</strong> {{ group.admin.username }}</p>
+            <p><strong>Members:</strong> {{ group.members.count }}</p>
+            <button type="button" onclick="exitGroup()" style="background: #dc3545; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer;">
+                Exit Group
+            </button>
+            <button type="button" onclick="backToChatList()" style="background: #6c757d; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin-left: 10px;">
+                Back to Chat List
+            </button>
+        </div>
+        <div id="chat-log">
+            {% for message in group.messages.all %}
+                <div class="message">
+                    <strong>{{ message.sender.username }}:</strong> {{ message.content }}
+                    <small class="timestamp">{{ message.timestamp|date:"M d, H:i" }}</small>
+                </div>
+            {% endfor %}
+        </div>
+        <input id="chat-message-input" type="text" placeholder="Write a message...">
+        <button id="chat-message-submit">Send</button>
+        
+    <script>
+        const GROUP_ID = "{{ group.id }}"; // Using group id (UUID)
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+
+        console.log("Connecting to Group:", GROUP_ID);
+
+        const chatSocket = new WebSocket(
+            wsScheme + '://' + window.location.host + '/ws/chat/' + GROUP_ID + '/'
+        );
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            const chatLog = document.querySelector('#chat-log');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            if (data.type === 'chat_message') {
+                messageDiv.innerHTML = '<strong>' + data.username + ':</strong> ' + data.message + 
+                    '<small class="timestamp"> ' + new Date().toLocaleTimeString() + '</small>';
+            } else if (data.type === 'user_joined') {
+                messageDiv.innerHTML = '<em>' + data.message + '</em>';
+            } else {
+                messageDiv.innerText = data.message;
+            }
+            chatLog.appendChild(messageDiv);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        };
+
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        document.querySelector('#chat-message-submit').onclick = function() {
+            const input = document.querySelector('#chat-message-input');
+            const message = input.value;
+            if (message.trim() !== "") {
+                chatSocket.send(JSON.stringify({ 
+                    'type': 'chat_message',
+                    'message': message 
+                }));
+                input.value = "";
+            }
+        };
+
+        document.querySelector('#chat-message-input').onkeyup = function(e) {
+            if (e.key === "Enter") { document.querySelector('#chat-message-submit').click(); }
+        };
+
+        function exitGroup() {
+            if (confirm('Are you sure you want to leave this group?')) {
+                window.location.href = "{% url 'exit_group' group.id %}";
+            }
+        }
+
+        function backToChatList() {
+            window.location.href = "{% url 'chat_list' %}";
+        }
+
+        // Auto-scroll to the bottom when page loads
+        window.addEventListener('load', function() {
+            const chatLog = document.querySelector('#chat-log');
+            if (chatLog) {
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
+        });
+
+         const presenceWsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const presenceSocket = new WebSocket(
+            presenceWsScheme + '://' + window.location.host + '/ws/presence/'
+        );
+
+        presenceSocket.onopen = function(e) {
+            console.log("Presence tracking activated (Online)");
+        };
+
+        presenceSocket.onclose = function(e) {
+            console.log("Presence tracking deactivated (Offline)");
+        };
+    </script>
+
+    {% else %}
+        <div class="join-container">
+            <h3>Join "{{ group.name }}"?</h3>
+            <p>Admin: <strong>{{ group.admin.username }}</strong></p>
+            <p>This group has {{ group.members.count }} members.</p>
+            
+            <form action="{% url 'join_group' group.id %}" method="get">
+                <button type="submit" style="background: #25D366; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    JOIN GROUP
+                </button>
+            </form>
+        </div>
+    {% endif %}
+</body>
+</html>
