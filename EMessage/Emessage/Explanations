@@ -1,0 +1,11 @@
+1. i registered the daphmine and channels in the settings, to include them in the apps
+
+2. Defined the ASGI application in settings 
+
+3. Configured the asgi.py file to handle the logic for websockets.
+
+4. Created a consumer.py file which is used to send back what it receives(echo)
+
+5. created a routing.py file which is used by channels to map websockets url to a consumer
+
+6. connected it to the asgi.py file with a ws routing pattern.

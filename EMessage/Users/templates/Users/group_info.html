@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ group.name }} - Group Info</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">{{ group.name }}</h3>
+                        <small>Group Setup</small>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Invite Link Section -->
+                        <div class="mb-4">
+                            <h5>Share Invite Link</h5>
+                            <p class="text-muted">Share this link with others to let them join your group:</p>
+                            
+                            <div class="input-group mb-3">
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="inviteLinkInput" 
+                                    value="{{ invite_link }}" 
+                                    readonly
+                                >
+                                <button 
+                                    class="btn btn-outline-secondary" 
+                                    type="button" 
+                                    onclick="copyToClipboard('inviteLinkInput')"
+                                >
+                                    Copy Link
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Group UUID Section -->
+                        <div class="mb-4">
+                            <h5>Group UUID</h5>
+                            <p class="text-muted">Share this ID with others if they need to join manually:</p>
+                            
+                            <div class="input-group mb-3">
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="groupUuidInput" 
+                                    value="{{ group_uuid }}" 
+                                    readonly
+                                >
+                                <button 
+                                    class="btn btn-outline-secondary" 
+                                    type="button" 
+                                    onclick="copyToClipboard('groupUuidInput')"
+                                >
+                                    Copy UUID
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Group Members Section -->
+                        <div class="mb-4">
+                            <h5>Group Members ({{ group.members.count }})</h5>
+                            {% if group.members.all %}
+                                <ul class="list-group">
+                                    {% for member in group.members.all %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>{{ member.username }}</strong>
+                                                {% if member == group.admin %}
+                                                    <span class="badge bg-success">Admin</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if member != group.admin %}
+                                                <a href="{% url 'remove_member' group.id member.id %}" class="btn btn-danger btn-sm">Remove</a>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">No members yet.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Group Settings -->
+                        <div class="mb-4">
+                            <h5>Group Info</h5>
+                            <p>
+                                <strong>Created:</strong> {{ group.created_at|date:"M d, Y H:i" }}<br>
+                                <strong>Admin:</strong> {{ group.admin.username }}<br>
+                                <strong>Total Members:</strong> {{ group.members.count }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <a href="{% url 'chat_room' group.id %}" class="btn btn-primary">Go to Chat</a>
+                        <a href="{% url 'chat_list' %}" class="btn btn-secondary">Back to Chats</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            element.select();
+            document.execCommand('copy');
+            
+            // Show feedback
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.classList.add('disabled');
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('disabled');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
