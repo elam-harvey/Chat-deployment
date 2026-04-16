@@ -32,6 +32,7 @@ python-decouple==3.8
 
 # ASGI Server
 gunicorn==21.2.0
+uvicorn==0.34.0
 
 # Development & Testing
 pytest==7.4.0
